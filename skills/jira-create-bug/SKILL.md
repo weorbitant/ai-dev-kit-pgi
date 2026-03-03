@@ -2,6 +2,8 @@
 name: jira-create-bug
 description: Use when creating a bug report in Jira, reporting an issue found during development or operations, or filing a ticket for a production problem. Use when user says "crea un bug", "reporta bug", "create bug", "file a bug", "abre un ticket", or "report issue".
 argument-hint: "[brief description]"
+allowed-tools: AskUserQuestion, ToolSearch, mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql, mcp__claude_ai_Atlassian__lookupJiraAccountId, mcp__claude_ai_Atlassian__createJiraIssue, mcp__claude_ai_Atlassian__editJiraIssue
+model: sonnet
 ---
 
 # Create Jira Bug

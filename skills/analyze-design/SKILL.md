@@ -29,15 +29,15 @@ mcp__claude_ai_Figma__get_design_context(fileKey, nodeId)
 mcp__claude_ai_Figma__get_screenshot(fileKey, nodeId)
 ```
 
-**Attempt 2 — Playwright fallback (if MCP fails or unavailable):**
+**Fallback — Manual screenshot (if MCP fails or unavailable):**
 
-```bash
-npx playwright screenshot --full-page "$FIGMA_URL" /tmp/figma-screenshot-$(date +%s).png
-```
+Figma requires authentication, so automated screenshots are not possible. Ask the user:
+
+> "No pude acceder al diseño via Figma MCP. ¿Puedes compartir un screenshot de la pantalla? Puedes arrastrarlo al chat o indicar la ruta del archivo."
 
 Read the screenshot with `Read` for visual analysis.
 
-If both fail, report failure and stop.
+If the user cannot provide a screenshot, report failure in the output and stop the design analysis.
 
 ### 3. Interrogate every element
 

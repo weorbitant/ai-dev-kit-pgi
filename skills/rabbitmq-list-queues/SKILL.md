@@ -2,6 +2,8 @@
 name: rabbitmq-list-queues
 description: Use when checking RabbitMQ queue status, listing queues with messages, checking DLQ counts, or monitoring consumer health. Use when user says "list queues", "lista colas", "queue status", "cuántos mensajes", "check queues", or "DLQ status".
 argument-hint: "[service-name] [environment]"
+allowed-tools: Bash, AskUserQuestion
+model: haiku
 ---
 
 # RabbitMQ Queue Status

@@ -1,6 +1,9 @@
 ---
 name: rabbitmq-reprocess-dlq
 description: Use when needing to reprocess messages from a RabbitMQ Dead Letter Queue (DLQ), move messages between queues using shovel, republish with clean headers, or purge unprocessable messages. Use when user mentions "reprocess", "reprocesar", "shovel", "purge DLQ", or "move messages from DLQ".
+disable-model-invocation: true
+allowed-tools: Bash, Read, AskUserQuestion
+model: haiku
 ---
 
 # Reprocessing RabbitMQ DLQ Messages

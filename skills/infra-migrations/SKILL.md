@@ -1,6 +1,9 @@
 ---
 name: infra-migrations
 description: Use when user asks to run database migrations, create tables, apply schema changes, or mentions "migration" in the context of DEV or PROD environments. Use when user mentions "migrate", "migration:up", "create table", or "schema changes" for remote environments.
+disable-model-invocation: true
+allowed-tools: Bash, Read, AskUserQuestion
+model: haiku
 ---
 
 # Running Database Migrations

@@ -2,6 +2,26 @@
 
 Template for the terminal output of `/ticket-analysis`.
 
+## Design Principles
+
+1. **Estructura fija** — todas las secciones aparecen siempre, en el mismo orden. Si una sección no tiene contenido, se muestra con "Ninguno" o "No aplica".
+2. **Cero asunciones** — si hay la mínima duda, va como pregunta. No existe sección "Asumido".
+3. **Trazabilidad** — cada hallazgo indica de dónde sale (fuente + cita o referencia concreta).
+4. **Escaneable** — alguien debe poder revisar el output en 2 minutos y saber: qué hay, qué falta, qué hacer.
+
+## Sections (always in this order)
+
+```
+1. CABECERA          — ticket key, título, tipo, estado
+2. RESUMEN           — 3 líneas: qué pide el ticket, qué se analizó, resultado headline
+3. FUENTES           — cada fuente consultada, qué se encontró, estado
+4. DATOS             — tabla plana: dato, origen, estado
+5. PREGUNTAS         — agrupadas por quién responde, con contexto y bloqueo
+6. PRÓXIMOS PASOS    — acciones numeradas con responsable
+7. SCOPE             — se entrega / no se entrega / bloqueado
+8. VALIDACIONES      — checklist del ticket
+```
+
 ## Full Output Template
 
 ```
@@ -10,171 +30,188 @@ Template for the terminal output of `/ticket-analysis`.
 Type: [type] | Status: [status] | SP: [points or —]
 ═══════════════════════════════════════════════════════
 
-📊 RESUMEN
-   Fuentes analizadas:
-   - Jira:       ✅ / ❌
-   - Figma:      ✅ / ⚠️ (Playwright) / ❌ (no URL)
-   - Confluence:  ✅ / ❌ (sin resultados)
-   - Notion:      ✅ / ❌ (sin resultados)
-   - Código:      ✅
-
-   Datos identificados: [N]
-   ✅ Claros: [N] | ⚠️ Parciales: [N] | ❌ Desconocidos: [N]
+RESUMEN
+  Qué pide:     [1 frase describiendo qué pide el ticket]
+  Se analizó:   Jira ✅ | Figma [✅/❌] | Confluence [✅/❌] | Notion [✅/❌] | Código ✅
+  Resultado:    [N] datos identificados · [N] preguntas abiertas · [N] bloqueos
 
 ───────────────────────────────────────────────────────
-📋 MAPA DE DATOS
+FUENTES CONSULTADAS
 ───────────────────────────────────────────────────────
 
-📋 [dato 1]
-   ¿Qué es?        [definición o ❌ Sin definir]
-   ¿De dónde viene? [fuente o ❌ Desconocido]
-   ¿Quién lo genera? [actor o ❌ Desconocido]
-   ¿Cuándo?        [condición o ❌ Sin especificar]
-   ¿Qué valores?   [restricciones o ❌ Sin restricciones conocidas]
-   ─────
-   En ticket:      [cómo se menciona o "No mencionado"]
-   En diseño:      [cómo aparece o "No aparece" o "Sin diseño"]
-   En código:      [Entity.field (tipo) o "No existe"]
-   En docs:        [link o "No documentado"]
-   ─────
-   Estado:         [✅ / ⚠️ / ❌]
-   Preguntas:      [lista]
+  JIRA — DEVPT-XXX
+  Estado: ✅ Leído
+  Hallazgos:
+    - [hallazgo 1 — cita breve o resumen de lo encontrado]
+    - [hallazgo 2]
 
-[repetir para cada dato]
+  FIGMA — [URL o "No hay URL en el ticket"]
+  Estado: [✅ Analizado / ❌ Sin diseño / ⚠️ Playwright fallback]
+  Hallazgos:
+    - [hallazgo 1]
+    - [hallazgo 2]
+  (Si no hay Figma: "No se encontró link a Figma en el ticket.")
 
-───────────────────────────────────────────────────────
-⚡ CRUCES PROBLEMÁTICOS
-───────────────────────────────────────────────────────
+  CONFLUENCE — [término buscado]
+  Estado: [✅ Encontrado / ❌ Sin resultados / ❌ Sin acceso]
+  Hallazgos:
+    - "[cita textual]" — Página: [título], [link]
+  (Si no hay resultados: "No se encontró documentación en Confluence sobre [términos].")
 
-👻 Datos fantasma (en ticket/diseño, no en código):
-   - [dato]: mencionado en [fuente], no existe en código
+  NOTION — [término buscado]
+  Estado: [✅ Encontrado / ❌ Sin resultados]
+  Hallazgos:
+    - "[cita textual]" — Página: [título], [link]
+  (Si no hay resultados: "No se encontró documentación en Notion sobre [términos].")
 
-🔇 Datos huérfanos (en código, no en ticket/diseño):
-   - [Entity.field]: existe en código, no mencionado en ticket
-
-💥 Contradicciones:
-   - [dato]: código dice [X], diseño dice [Y], ticket dice [Z]
-
-❓ Sin origen conocido:
-   - [dato]: existe pero no se encontró quién lo genera
-
-📝 Sin reglas documentadas:
-   - [dato]: existe pero no hay condiciones de cuándo/cómo cambia
-
-(Omitir secciones vacías)
+  CÓDIGO — [entidades/servicios analizados]
+  Estado: ✅ Analizado
+  Hallazgos:
+    - [entidad encontrada + campos relevantes]
+    - [servicio encontrado + métodos relevantes]
+    - [lo que NO existe y se esperaba encontrar]
 
 ───────────────────────────────────────────────────────
-🔴 BLOCKERS (negocio — necesitan respuesta del PO)
+DATOS IDENTIFICADOS
 ───────────────────────────────────────────────────────
 
-1. "[texto citado del ticket]"
-   → Técnico: [pregunta específica]
-   → Para PO: [pregunta reformulada sin jerga técnica]
+  Cada dato mencionado en cualquier fuente, una línea por dato:
+
+  #  Dato                Origen                         Estado
+  ── ─────────────────── ────────────────────────────── ──────
+  1  [nombre]            [de dónde sale — fuente]       ✅ / ❓ / ❌
+  2  [nombre]            [de dónde sale — fuente]       ✅ / ❓ / ❌
+  ...
+
+  Leyenda:
+  ✅ Claro    — se sabe qué es, de dónde viene, qué valores tiene
+  ❓ Dudoso   — existe pero hay preguntas (ver sección PREGUNTAS)
+  ❌ No existe — mencionado en ticket/diseño pero no existe en código ni docs
+
+  Si un dato tiene estado ❓ o ❌, DEBE tener al menos una pregunta
+  en la sección PREGUNTAS. Sin excepción.
 
 ───────────────────────────────────────────────────────
-🟡 BLOCKERS (técnicos — el equipo dev puede resolver)
+PREGUNTAS
 ───────────────────────────────────────────────────────
 
-2. "[texto citado]"
-   → [pregunta]
+  Agrupadas por quién debe responder. Cada pregunta tiene:
+  - Número secuencial (referenciado en SCOPE y PRÓXIMOS PASOS)
+  - Contexto: de dónde sale la duda, con cita de la fuente
+  - Pregunta concreta
+  - Qué bloquea si no se responde
+
+  PARA EL PO / NEGOCIO:
+  (Preguntas en lenguaje no técnico. Sin jerga. Con ejemplo concreto.)
+
+  #1 · [título corto de la pregunta]
+       Contexto:  [de dónde sale la duda — fuente + cita]
+       Pregunta:  [pregunta concreta, sin jerga técnica]
+       Ejemplo:   [ejemplo tangible para que el PO entienda]
+       Bloquea:   [qué no se puede hacer sin respuesta]
+
+  #2 · [título corto]
+       Contexto:  ...
+       Pregunta:  ...
+       Ejemplo:   ...
+       Bloquea:   ...
+
+  PARA EL TECH LEAD / EQUIPO DEV:
+  (Preguntas técnicas que el equipo puede resolver internamente.)
+
+  #N · [título corto]
+       Contexto:  [referencia técnica — archivo, línea, migración]
+       Pregunta:  [pregunta técnica]
+       Bloquea:   [qué no se puede hacer sin respuesta]
+
+  PARA DISEÑO:
+  (Solo si hay gaps de diseño detectados.)
+
+  #N · [título corto]
+       Contexto:  [qué falta en el diseño]
+       Pregunta:  [qué se necesita]
+       Bloquea:   [qué no se puede implementar sin diseño]
+
+  (Si un grupo no tiene preguntas, mostrar: "Ninguna pregunta para [rol].")
 
 ───────────────────────────────────────────────────────
-🟢 NICE TO HAVE
+PRÓXIMOS PASOS
 ───────────────────────────────────────────────────────
 
-3. "[texto citado]"
-   → [pregunta]
+  Acciones concretas numeradas. Cada una tiene responsable.
+  Ordenadas por prioridad (lo que desbloquea más primero).
+
+  1. [Responsable] · [acción concreta] — desbloquea pregunta #[N]
+  2. [Responsable] · [acción concreta] — desbloquea pregunta #[N]
+  3. [Dev] · [lo que se puede empezar ya sin esperar respuestas]
+  ...
+
+  SE PUEDE EMPEZAR YA:
+  - [item que no depende de ninguna pregunta]
+
+  REQUIERE RESPUESTA PRIMERO:
+  - [item] — espera pregunta #[N]
 
 ───────────────────────────────────────────────────────
-🎨 DISEÑO
+SCOPE
 ───────────────────────────────────────────────────────
 
-Fuente: [Figma MCP / Playwright screenshot / No disponible]
+  ✅ SE ENTREGA:
+     - [item concreto]: [qué se implementa exactamente]
 
-Campos en UI:
-┌─────────────┬──────────┬──────────┬─────────────┬──────────┐
-│ Label       │ Tipo     │ Formato  │ Obligatorio │ Editable │
-├─────────────┼──────────┼──────────┼─────────────┼──────────┤
-│ [label]     │ [type]   │ [format] │ [sí/no/❓]  │ [sí/no]  │
-└─────────────┴──────────┴──────────┴─────────────┴──────────┘
+  ❌ NO SE ENTREGA:
+     - [item]: [razón — "no mencionado en ACs" / "fuera de alcance"]
 
-Estados:
-✅ Cubiertos: [lista]
-❌ Faltantes: [lista]
+  🚧 BLOQUEADO:
+     - [item]: esperando respuesta a pregunta #[N]
 
-Correspondencia código ↔ diseño:
-- En UI sin código: [campos]
-- En código sin UI: [campos]
+  (No hay sección "Asumido". Si hay duda, va a PREGUNTAS.)
 
 ───────────────────────────────────────────────────────
-📄 DOCUMENTACIÓN
+VALIDACIONES DEL TICKET
 ───────────────────────────────────────────────────────
 
-Encontrada:
-- [Título] — [link]: "[cita relevante]"
-
-Gaps:
-- [concepto] — no documentado en ninguna fuente
-
-───────────────────────────────────────────────────────
-⚠️ VALIDACIONES ESTRUCTURALES
-───────────────────────────────────────────────────────
-
-[✅/❌] Descripción: [presente y suficiente / ausente o < 20 palabras]
-[✅/❌] Criterios de aceptación: [presentes / ausentes]
-[✅/❌] Link a Figma: [presente / ausente (y se necesita)]
-[✅/❌] Story points: [estimados / sin estimar]
-[✅/❌] Subtareas: [existen / faltan (descripción sugiere múltiples pasos)]
-
-═══════════════════════════════════════════════════════
-📦 SCOPE — QUÉ SE ENTREGA
-═══════════════════════════════════════════════════════
-
-✅ SE ENTREGA (con la info disponible):
-   - [item concreto]: [qué se implementa exactamente]
-   - [item concreto]: [qué se implementa exactamente]
-
-❌ NO SE ENTREGA:
-   - [item]: [razón concreta]
-   - [item]: [razón concreta]
-
-🚧 BLOQUEADO (no se puede entregar sin respuesta):
-   - [item]: bloqueado por pregunta #[N]
-   - [item]: bloqueado por pregunta #[N]
-
-⚠️ ASUMIDO (se entrega con supuestos — confirmar):
-   - [item]: "Se asume que [supuesto]. Si no es así, [impacto]."
+  [✅/❌] Descripción         [presente / ausente o insuficiente]
+  [✅/❌] Criterios aceptación [presentes / ausentes]
+  [✅/❌] Link a Figma         [presente / no requerido / ausente y se necesita]
+  [✅/❌] Story points         [estimados / sin estimar]
+  [✅/❌] Subtareas            [existen / no existen y se sugiere dividir]
 
 ═══════════════════════════════════════════════════════
 ```
 
-## Section Rules
+## Rules
 
-- **Omit empty sections** — if no contradictions found, don't show "Contradicciones"
-- **Number questions sequentially** across all blocker/nice-to-have sections
-- **Link blocker numbers to scope items** — "bloqueado por pregunta #3"
-- **Data map goes first** — it's the core of the analysis
-- **Scope goes last** — it's the conclusion derived from everything above
-- **Never invent items** — if a section would be speculative, omit it or mark with ❓
+### Structure
+- **ALL 8 sections appear ALWAYS**, in the exact order above.
+- If a section has no content, show it with "Ninguno" or "No aplica". NEVER omit a section.
+- This makes the output predictable — the reader always knows where to look.
 
-## Glossary Entry Template
+### Zero assumptions
+- If there is ANY doubt about a data element, it gets status ❓ or ❌ and a question in PREGUNTAS.
+- There is NO "Asumido" section. If you're tempted to write "Se asume que...", write a question instead.
+- Better to ask a "dumb" question than to silently assume something wrong.
 
-For `docs/glossary.md` updates:
+### Traceability
+- Every finding in FUENTES must cite where it came from: page title, URL, or file path.
+- Every finding from documentation must include a direct quote in quotes.
+- Every finding from code must reference the file (e.g. `obligation.ts:15`).
+- The DATOS table's "Origen" column must trace back to a specific source in FUENTES.
 
-```markdown
-## [Nombre en español] ([Entity name in code])
-- **Qué es**: [definición de negocio — NO técnica]
-- **De dónde viene**: [quién lo crea y cuándo — evento, usuario, seed, cálculo]
-- **Campos clave**:
-  - `fieldName`: [significado en lenguaje de negocio]
-  - `fieldName`: [significado en lenguaje de negocio]
-- **Condiciones**: [cuándo cambia de estado, reglas de negocio conocidas]
-- **Fuente de verdad**: [sistema o proceso que origina este dato]
-- **Última revisión**: [YYYY-MM-DD — TICKET-KEY]
-```
+### Scannability
+- RESUMEN is 3 lines max. It tells you: what, where, how many problems.
+- DATOS is a flat table — one line per data element. No nested cards.
+- PREGUNTAS are grouped by role — the PO only reads their section.
+- PRÓXIMOS PASOS are ordered by priority — do the most impactful first.
+- SCOPE is the conclusion — derived from everything above.
 
-Rules:
-- Only add data confirmed from code or documentation
-- Mark unconfirmed with ❓ prefix
-- Update `Última revisión` with each analysis
-- Keep definitions in business language, not technical
+### Questions format
+- Every question has a sequential number (#1, #2, ...) used across the entire document.
+- SCOPE references question numbers: "bloqueado por #3".
+- PRÓXIMOS PASOS references question numbers: "desbloquea #3".
+- This creates a traceable chain: dato ❓ → pregunta #N → bloqueo en scope → próximo paso.
+
+### Data element status
+- ✅ **Claro**: se sabe qué es, de dónde viene, qué valores tiene, quién lo genera, cuándo. No quedan dudas.
+- ❓ **Dudoso**: existe parcialmente pero hay al menos una pregunta abierta. MUST have a question in PREGUNTAS.
+- ❌ **No existe**: mencionado en ticket/diseño pero no existe en código ni docs. MUST have a question in PREGUNTAS.

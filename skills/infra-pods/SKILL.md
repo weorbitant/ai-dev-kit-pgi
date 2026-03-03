@@ -2,6 +2,8 @@
 name: infra-pods
 description: Use when checking pod status, listing running services, investigating crashloops, viewing pod events, or checking resource usage. Use when user says "pods", "qué está corriendo", "pod status", "check pods", "restart", "crashloop", or "pod events".
 argument-hint: "[service-name] [environment]"
+allowed-tools: Bash, AskUserQuestion
+model: haiku
 ---
 
 # Kubernetes Pod Management

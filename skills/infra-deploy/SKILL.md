@@ -1,6 +1,9 @@
 ---
 name: infra-deploy
 description: Use when user asks to deploy to production, check what's deployed, find a docker image tag for a PR, or trigger a production deployment. Use when user mentions "deploy", "prod", "production", "release", or "ship".
+disable-model-invocation: true
+allowed-tools: Bash, AskUserQuestion
+model: sonnet
 ---
 
 # Deploying to Production

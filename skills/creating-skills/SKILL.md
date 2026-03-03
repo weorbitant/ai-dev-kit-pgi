@@ -1,6 +1,7 @@
 ---
 name: creating-skills
 description: Use when creating new skills, editing existing skills, or reviewing skill quality. Use when user mentions building, writing, or improving a SKILL.md file or skill folder. Guides skill authoring following Anthropic's official best practices.
+model: sonnet
 ---
 
 # Creating Skills

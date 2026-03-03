@@ -2,23 +2,22 @@
 name: ticket-analysis
 description: Use when doing comprehensive ticket analysis before implementation. Analyzes Jira ticket, Figma designs, Confluence/Notion docs, and codebase to produce a data map where every field is questioned and scope is explicitly defined. Use when user says "analiza ticket", "ticket analysis", "prepara ticket", "revisar ticket completo", or "qué falta en este ticket".
 argument-hint: "[TICKET-KEY or URL]"
-allowed-tools: Read, Grep, Glob, Bash, Agent, AskUserQuestion, ToolSearch, mcp__claude_ai_Atlassian__getJiraIssue, mcp__claude_ai_Atlassian__editJiraIssue, mcp__claude_ai_Atlassian__addCommentToJiraIssue, mcp__claude_ai_Atlassian__searchConfluenceUsingCql, mcp__claude_ai_Atlassian__getConfluencePage, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot
+allowed-tools: Read, Grep, Glob, Bash, Agent, AskUserQuestion, ToolSearch, Edit, Write, mcp__claude_ai_Atlassian__getJiraIssue, mcp__claude_ai_Atlassian__editJiraIssue, mcp__claude_ai_Atlassian__addCommentToJiraIssue, mcp__claude_ai_Atlassian__searchConfluenceUsingCql, mcp__claude_ai_Atlassian__getConfluencePage, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Figma__get_design_context, mcp__claude_ai_Figma__get_screenshot
 ---
 
 # Ticket Analysis
 
-Comprehensive ticket analysis that interrogates every data element across 4 sources (Jira, Figma, documentation, code) and produces a unified data map with explicit scope.
+Analyze a ticket across 4 sources (Jira, Figma, docs, code) and produce a structured report with fixed format.
 
-## Core Principle
+## Language
 
-**Do not assume anything.** Every data element must be questioned:
-- What does it mean exactly?
-- Where does it come from? Who generates it?
-- When is it generated? Under what conditions?
-- What values can it have? What are the constraints?
-- Who consumes it? For what purpose?
+Instructions in this file are in English (for LLM processing). ALL user-facing output MUST be in Spanish, following the template in [references/output-format.md](references/output-format.md).
 
-A field existing in code does NOT mean it is understood. A label in Figma does NOT mean the data is defined.
+## Core Principles
+
+1. **Zero assumptions** — if there is the slightest doubt, ask. Never write "se asume que...". Write a question instead.
+2. **Traceability** — every finding must cite its source (page title + URL, or file path + line).
+3. **Fixed structure** — the output ALWAYS has the same 8 sections in the same order. See [references/output-format.md](references/output-format.md).
 
 ## Configuration
 
@@ -28,142 +27,141 @@ A field existing in code does NOT mean it is understood. A label in Figma does N
 
 ### Phase 1: Fetch ticket
 
-Parse `$ARGUMENTS` — can be a ticket key (`DEVPT-52`) or URL (`https://afianza-ac.atlassian.net/browse/DEVPT-52`). Extract the key.
+Parse `$ARGUMENTS` to extract ticket key. Can be:
+- Key: `DEVPT-52` → use as-is
+- URL: extract from `selectedIssue=DEVPT-52` or `/browse/DEVPT-52`
 
 ```
 ToolSearch → "select:mcp__claude_ai_Atlassian__getJiraIssue"
 mcp__claude_ai_Atlassian__getJiraIssue(cloudId: "afianza-ac.atlassian.net", issueIdOrKey: "<key>")
 ```
 
-From the ticket, extract:
-- **Figma URLs**: any `figma.com/design/...` or `figma.com/file/...` links
-- **Confluence URLs**: any `afianza-ac.atlassian.net/wiki/...` links
-- **Notion URLs**: any Notion links
-- **ALL data terms**: every noun that could be a field, entity, concept, state, or action. Do not filter — collect everything, even obvious ones.
+Extract from ticket content:
+- Figma URLs (`figma.com/design/...`, `figma.com/file/...`)
+- Confluence URLs (`afianza-ac.atlassian.net/wiki/...`)
+- Notion URLs
+- ALL data terms: every noun that could be a field, entity, concept, state, or action. Do not filter.
 
-### Phase 2: Parallel analysis (launch 3 Agents)
+### Phase 2: Parallel analysis
 
-Launch these 3 agents in parallel using the `Agent` tool:
+Launch up to 3 agents in parallel using the `Agent` tool. Each agent must receive **complete instructions** — they cannot access skill definitions.
 
-**Agent 1 — Design analysis** (skip if no Figma URLs found):
-```
-Apply the logic of /analyze-design for each Figma URL found in the ticket.
-Analyze: [list of Figma URLs]
-For each design, extract every field, action, and state. Question everything.
-Return structured output with: data fields found, actions, states covered/missing, questions.
-```
+**IMPORTANT**: If any agent fails or returns incomplete data, do NOT retry. Report the failure in FUENTES as `⚠️ Error al analizar [source]: [reason]` and continue with the sources that did succeed.
 
-**Agent 2 — Documentation search:**
-```
-Apply the logic of /analyze-docs.
-Search Confluence (cloudId: afianza-ac.atlassian.net) and Notion for these terms: [key terms from ticket].
-Also fetch these specific URLs if found: [Confluence/Notion URLs from ticket].
-Return: definitions found (as direct quotes), business rules, contradictions, gaps.
-```
+**Agent 1 — Design** (skip if no Figma URLs):
 
-**Agent 3 — Data model analysis:**
-```
-Apply the logic of /analyze-data-model.
-Analyze these entities/concepts mentioned in the ticket: [entity/concept list].
-For each field, trace: origin, mutations, validations, relationships.
-Return structured field profiles with questions.
-```
+Prompt must include:
+- The Figma URL(s) to analyze
+- Instructions to first read the skill file: `Read ~/.claude/skills/analyze-design/SKILL.md` then follow its instructions
+- Use `ToolSearch` to load `mcp__claude_ai_Figma__get_design_context` and `mcp__claude_ai_Figma__get_screenshot`
+- For each field/input: extract label, type, format, required?, editable?
+- For each button/action: what it does, confirmation step?, success/error states?
+- Detect covered and missing UI states (empty, loading, error, success, pagination)
+- If Figma MCP fails, report it — do NOT attempt Playwright
 
-**Inline — Ticket clarification** (run in main thread while agents execute):
+**Agent 2 — Documentation:**
 
-Apply the same logic as `/jira-clarify-ticket`:
+Prompt must include:
+- The key terms to search (extracted from ticket in Phase 1)
+- Any Confluence/Notion URLs found in the ticket
+- Instructions to first read the skill file: `Read ~/.claude/skills/analyze-docs/SKILL.md` then follow its instructions
+- Confluence Cloud ID: `afianza-ac.atlassian.net`
+- Use `ToolSearch` to load Atlassian and Notion MCP tools
+- Return direct quotes (never paraphrase), business rules, contradictions between sources
+- If a platform is unreachable, report it and continue with the other
+
+**Agent 3 — Data model:**
+
+Prompt must include:
+- The entity/concept names to analyze (extracted from ticket in Phase 1)
+- Instructions to first read the skill file: `Read ~/.claude/skills/analyze-data-model/SKILL.md` then follow its instructions
+- For each field: trace origin (who creates it), mutations (who changes it), validations, possible values
+- Map relationships between entities (direction, cardinality, cascade behavior)
+- Check migrations for recent schema changes
+
+**Inline — Ticket clarification** (main thread, while agents run):
 - Detect author's open questions
-- Analyze ambiguities (blockers vs nice-to-have)
-- Separate by audience (business vs technical)
-- Reformulate business blockers for PO
-- Structural validations (description, ACs, Figma link, SP)
+- Analyze ambiguities
+- Structural validations (description, ACs, Figma link, SP, subtasks)
 
-### Phase 3: Cross-reference — Interrogate each data element
+### Phase 3: Cross-reference
 
-Once all agents return, build a **data map**. For EACH data element identified from ANY source:
+Once all agents return, build a flat data table. For EACH data element from ANY source, assign status:
 
-```
-📋 [data name]
-   ¿Qué es?        [definition found or "❌ Not defined"]
-   ¿De dónde viene? [source: AMQP event / user input / calculation / seed / ❌ Unknown]
-   ¿Quién lo genera? [service, external system, user / ❌ Unknown]
-   ¿Cuándo?        [creation condition / ❌ Not specified]
-   ¿Qué valores?   [enum, range, format / ❌ No known constraints]
-   ─────
-   En ticket:      [how it's mentioned or "Not mentioned"]
-   En diseño:      [how it appears or "Not visible" or "No design"]
-   En código:      [Entity.field (type) or "Does not exist"]
-   En docs:        [link or "Not documented"]
-   ─────
-   Estado:         ✅ Clear / ⚠️ Partial / ❌ Unknown
-   Preguntas:      [specific questions about this data element]
-```
+- ✅ **Claro** — fully understood: what it is, where it comes from, what values it has
+- ❓ **Dudoso** — partially known, has open questions. MUST have at least one question.
+- ❌ **No existe** — mentioned in ticket/design but not found in code/docs. MUST have at least one question.
 
-Flag cross-reference problems:
-- **Ghost data**: mentioned in ticket/design but not in code or docs
-- **Orphan data**: exists in code but not mentioned in ticket or design
-- **Contradiction**: code type ≠ design format ≠ ticket description
-- **No origin**: exists but nobody knows where it comes from
-- **No rules**: exists but no documented conditions for when/how it changes
+Detect cross-reference problems:
+- Ghost data (in ticket/design, not in code)
+- Orphan data (in code, not in ticket/design)
+- Contradictions between sources
+- Data without known origin
+- Data without documented rules
 
-### Phase 4: Define scope
+### Phase 4: Build questions
 
-Based on ALL findings, produce an explicit scope. **Do not invent scope items that aren't supported by the analysis.**
+Group ALL questions by who must answer:
 
-**SE ENTREGA** — only items where:
-- The data is understood (✅ or ⚠️ with reasonable assumption)
-- The design exists (or is not needed)
-- No blockers prevent implementation
+**PARA EL PO / NEGOCIO** — non-technical language, with concrete example, stating what it blocks.
+**PARA EL TECH LEAD / EQUIPO DEV** — technical questions the team resolves internally.
+**PARA DISEÑO** — missing UI states, undefined flows, design gaps.
 
-**NO SE ENTREGA** — items explicitly excluded:
-- Not mentioned in acceptance criteria
-- Out of scope per ticket description
-- Belongs to a different ticket
+Each question gets a sequential number (#1, #2, ...) referenced in SCOPE and PRÓXIMOS PASOS.
 
-**BLOQUEADO** — items that cannot be delivered without answers:
-- Linked to specific blocker questions
-- Missing data definitions
-- Missing design states
+### Phase 5: Define scope
 
-**ASUMIDO** — items delivered with assumptions:
-- State the assumption clearly
-- State the impact if the assumption is wrong
+- **SE ENTREGA** — only items with ✅ data and no blocking questions
+- **NO SE ENTREGA** — explicitly excluded items with reason
+- **BLOQUEADO** — items waiting on specific question numbers
 
-### Phase 5: Output
+There is NO "Asumido" section. If there's doubt, it's a question.
 
-Display the full analysis in terminal using the format in [references/output-format.md](references/output-format.md).
+### Phase 6: Build next steps
 
-### Phase 6: Offer actions
+Ordered by priority (what unblocks the most first):
+- Each step has a responsible role and references the question it unblocks
+- Separate "SE PUEDE EMPEZAR YA" from "REQUIERE RESPUESTA PRIMERO"
+
+### Phase 7: Output
+
+Display the full analysis using the EXACT format in [references/output-format.md](references/output-format.md).
+
+ALL 8 sections ALWAYS appear. If a section has no content, show "Ninguno" or "No aplica".
+
+### Phase 8: Offer actions
 
 Ask the user (multiselect):
 
-1. **Comment on Jira** — post full technical analysis + data map as comment
-2. **Update description** — add business blocker questions for PO + proposed scope
+1. **Comment on Jira** — post technical analysis + questions as comment
+2. **Update description** — add PO questions + proposed scope to ticket description
 3. **Update glossary** — add/update entries in `docs/glossary.md`
 4. **None**
 
-#### If commenting on Jira:
+If commenting: `mcp__claude_ai_Atlassian__addCommentToJiraIssue` (cloudId: `afianza-ac.atlassian.net`).
+If updating description: `mcp__claude_ai_Atlassian__editJiraIssue`. Preserve existing content. Only add/replace "Preguntas bloqueantes" and "Scope propuesto" sections.
+If updating glossary: Read `docs/glossary.md`, add/update entries using this template:
 
-Use `mcp__claude_ai_Atlassian__addCommentToJiraIssue` with cloudId `afianza-ac.atlassian.net`. Include data map summary + all questions.
+```markdown
+## [Nombre en español] ([Entity name in code])
+- **Qué es**: [definición de negocio — NO técnica]
+- **De dónde viene**: [quién lo crea y cuándo — evento, usuario, seed, cálculo]
+- **Campos clave**:
+  - `fieldName`: [significado en lenguaje de negocio]
+  - `fieldName`: [significado en lenguaje de negocio]
+- **Condiciones**: [cuándo cambia de estado, reglas de negocio conocidas]
+- **Fuente de verdad**: [sistema o proceso que origina este dato]
+- **Última revisión**: [YYYY-MM-DD — TICKET-KEY]
+```
 
-#### If updating description:
-
-Use `mcp__claude_ai_Atlassian__editJiraIssue`. Add/replace sections:
-- "Preguntas bloqueantes (requieren decisión de negocio)" — only business blockers, reformulated
-- "Scope propuesto" — what will be delivered, what won't, what's blocked
-
-Preserve all existing description content outside these sections.
-
-#### If updating glossary:
-
-Read `docs/glossary.md` (create if doesn't exist). For each data element with status ✅ or ⚠️, add or update an entry. Mark unconfirmed data with ❓.
+Rules: Only add data confirmed from code or docs. Mark unconfirmed with ❓. Update `Última revisión`. Keep definitions in business language.
 
 ## Edge cases
 
-- If no Figma URLs in ticket, skip design analysis. Report as gap in output.
-- If Confluence/Notion return nothing, report as gap. Continue with other sources.
-- If no entities match in code, the ticket may describe new functionality. Note this explicitly.
-- If the ticket has no description, analyze whatever exists (summary, ACs, comments).
-- If ticket key is invalid, tell user and stop.
-- Do NOT invent questions to fill sections. If something is clear, say it's clear.
-- The scope section must NEVER include items not supported by the analysis. If there isn't enough information to define scope, say so.
+- No Figma URLs → report in FUENTES as "No hay URL de Figma en el ticket". Still show DISEÑO section as "No aplica".
+- Confluence/Notion empty → report in FUENTES. Continue with other sources.
+- No matching entities in code → ticket describes new functionality. Note in FUENTES.
+- No description → analyze summary, ACs, comments.
+- Invalid ticket key → tell user and stop.
+- Do NOT invent questions. If something is clear, say it's clear.
+- Do NOT invent scope items. If there isn't enough info to define scope, say so in SCOPE.

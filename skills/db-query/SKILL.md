@@ -2,6 +2,8 @@
 name: db-query
 description: Use when needing to query a PostgreSQL database in DEV or PROD, check if records exist, count rows, inspect data, or run read-only SQL queries from within the cluster. Use when user says "consulta la BD", "query", "busca en la tabla", "check database", "db query", or "existe este registro".
 argument-hint: "[query description] [environment]"
+allowed-tools: Bash, Read, AskUserQuestion
+model: sonnet
 ---
 
 # Database Queries

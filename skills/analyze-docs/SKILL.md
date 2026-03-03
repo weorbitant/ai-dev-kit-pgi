@@ -3,6 +3,7 @@ name: analyze-docs
 description: Use when searching for documentation about a concept, entity, or business term in Confluence and Notion. Extracts definitions and rules without interpretation. Use when user says "busca documentación", "qué dice confluence", "analyze docs", "busca en notion", "hay documentación sobre", or "qué sabemos de".
 argument-hint: "[search term or URL]"
 allowed-tools: Read, AskUserQuestion, ToolSearch, mcp__claude_ai_Atlassian__searchConfluenceUsingCql, mcp__claude_ai_Atlassian__getConfluencePage, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch
+model: sonnet
 ---
 
 # Analyze Docs
@@ -30,10 +31,11 @@ If no argument, ask the user what to search for.
 ToolSearch → "select:mcp__claude_ai_Atlassian__searchConfluenceUsingCql"
 ```
 
-Search with CQL using the terms. Try multiple queries:
-- Exact term: `text ~ "\"obligación fiscal\""`
+Search with CQL using the terms. Try multiple queries (pass the CQL string directly as the `cql` parameter — no extra escaping needed):
+- Exact term: `text ~ "obligación fiscal"`
 - Individual words: `text ~ "obligación" AND text ~ "fiscal"`
 - Related terms: synonyms, abbreviations, Spanish/English variants
+- By title: `title ~ "obligación"`
 
 For each relevant result, fetch the full page:
 ```

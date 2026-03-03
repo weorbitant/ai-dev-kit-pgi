@@ -2,6 +2,8 @@
 name: infra-portforward
 description: Use when needing to port-forward to any Kubernetes service (RabbitMQ, PostgreSQL, internal APIs). Use when user says "port-forward", "portforward", "connect to", "forward port", or needs local access to a cluster service in DEV or PROD.
 argument-hint: "[service] [environment]"
+allowed-tools: Bash, AskUserQuestion
+model: haiku
 ---
 
 # Kubernetes Port-Forward

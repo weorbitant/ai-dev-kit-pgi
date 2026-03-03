@@ -2,6 +2,8 @@
 name: infra-logs
 description: Use when checking pod logs, searching for errors, viewing recent log output, or debugging runtime issues in DEV or PROD. Use when user says "logs de", "ver logs", "qué errores hay", "check logs", "show errors", or mentions log analysis of a service.
 argument-hint: "[service-name] [environment]"
+allowed-tools: Bash, AskUserQuestion
+model: sonnet
 ---
 
 # Kubernetes Pod Logs
