@@ -44,6 +44,12 @@ Claude Code skills for PGI development and operations.
 |---|---|
 | `creating-skills` | Guide for authoring new skills |
 
+## Docs
+
+| Document | Description |
+|---|---|
+| [Ticket Analysis Workflow](docs/workflow-ticket-analysis.md) | Step-by-step workflow for analyzing tickets before implementation (Jira + Figma + Confluence/Notion + codebase) |
+
 ## Installation
 
 Copy skills to your Claude Code personal skills directory:
