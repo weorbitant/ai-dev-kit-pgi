@@ -52,17 +52,49 @@ Claude Code skills for PGI development and operations.
 
 ## Installation
 
-Copy skills to your Claude Code personal skills directory:
+Clone the repo and symlink the skills into your Claude Code personal directory:
 
 ```bash
-cp -R skills/* ~/.claude/skills/
-```
+git clone <repo-url> && cd ai-pgi-dev-kit
 
-Or symlink for auto-updates:
-
-```bash
 for dir in skills/*/; do
   name=$(basename "$dir")
   ln -sfn "$(pwd)/$dir" ~/.claude/skills/"$name"
 done
 ```
+
+The symlinks make `~/.claude/skills/` point directly to the repo files. This means:
+
+| Action | What happens |
+|---|---|
+| **Use** a skill | Claude Code reads `~/.claude/skills/X` which resolves to the repo via symlink |
+| **Edit** a skill | You edit the file in the repo (or via the symlink — same thing) |
+| **Share** changes | `git commit && git push` from the repo |
+| **Receive** updates | `git pull` — symlinks keep pointing to the same files |
+
+No manual copying needed in either direction.
+
+## Contributing
+
+### Adding a new skill
+
+1. Create a folder under `skills/` with a kebab-case name.
+2. Add a `SKILL.md` file with the required frontmatter (`name`, `description`) and instructions. See the `creating-skills` skill for authoring guidelines.
+3. Optionally add `references/`, `scripts/`, or `assets/` subfolders for supporting files.
+4. Update the skills table in this README.
+5. Submit a PR with a clear description of the skill's purpose and trigger conditions.
+
+### Improving an existing skill
+
+1. Test the current behavior by invoking the skill in Claude Code.
+2. Make your changes to `SKILL.md` or supporting files.
+3. Verify the skill still triggers correctly and produces the expected output.
+4. Submit a PR explaining what changed and why.
+
+### General guidelines
+
+- Keep skills focused on a single workflow — avoid catch-all skills.
+- Follow the **progressive disclosure** principle: load only what's needed, when it's needed.
+- Use `references/` for detailed docs that the skill loads on-demand, rather than embedding everything in `SKILL.md`.
+- Write trigger descriptions that are specific enough to avoid false activations.
+- Include both English and Spanish trigger phrases in the `description` field where applicable.
