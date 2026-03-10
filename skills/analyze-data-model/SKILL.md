@@ -73,6 +73,48 @@ For each field found on the entity, build a profile. **Do not assume anything fr
     → [restrictions found | ❌ "No restrictions visible in code"]
 ```
 
+### 3b. Interrogate configuration parameters
+
+When the concept is a configuration parameter rather than a data entity, use this alternative interrogation pattern.
+
+**Detection:** The argument name contains `config`, `cron`, `timeout`, `interval`, `limit`, `expression`, `schedule`, `retry`, `threshold`; or it lives in `src/config/`, `.env`, `environment.*`, or appears as an environment variable.
+
+```
+Glob → src/config/**/*.ts
+Glob → .env*
+Grep → "<term>" in src/config/ and .env*
+Grep → "process.env.<TERM>" or "configService.get('<term>')" in src/
+```
+
+For each parameter found, build this profile:
+
+```
+[parameterName] (type: X | source: env/config/hardcoded)
+
+  ¿Qué valor default tiene?
+    → [value found in code or "No definido"]
+
+  ¿En qué entornos varía?
+    → [search in src/config/*.ts, .env* for env-specific values]
+
+  ¿Cómo se valida?
+    → [validation in config module, class-validator on config DTO, or "Sin validación"]
+
+  ¿Qué pasa con valor inválido?
+    → [fails at startup? uses default? runtime error? or "No determinado"]
+
+  ¿Quién lo consume?
+    → [ServiceName that reads the config — file:line]
+
+  ¿Se puede cambiar en caliente?
+    → [requires restart or is dynamic — based on how it's read]
+
+  ¿Qué rango es válido?
+    → [min/max, allowed values, syntax (e.g. cron expression format)]
+```
+
+If the argument is a mixed concept (entity + config), interrogate both: use section 3 for entity fields and section 3b for config parameters.
+
 ### 4. Map relationships
 
 ```
