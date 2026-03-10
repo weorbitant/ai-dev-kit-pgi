@@ -41,14 +41,44 @@ Extract from ticket content:
 - Confluence URLs (`afianza-ac.atlassian.net/wiki/...`)
 - Notion URLs
 - ALL data terms: every noun that could be a field, entity, concept, state, or action. Do not filter.
+- Referenced tickets: scan description, ACs, comments, and linked issues for `DEVPT-XXX` patterns
+
+**Resolve Jira dependencies:** For each referenced ticket (pattern `DEVPT-XXX`):
+- Fetch with `mcp__claude_ai_Atlassian__getJiraIssue(cloudId: "afianza-ac.atlassian.net", issueIdOrKey: "<key>")`
+- Classify status:
+  - `✅ Resuelto` — Done, Closed, Released
+  - `⚠️ En progreso` — In Progress, In Review, In QA
+  - `🚧 Bloqueante` — To Do, Backlog, Open (not yet started)
+- Extract: title, status, and what the current ticket needs from it
+
+### Phase 1b: Classify ticket
+
+Based on the ticket content (description, ACs, type, linked issues), classify into one of 4 types:
+
+| Type | Indicators | Agents to launch |
+|------|-----------|-----------------|
+| `business-feature` | UI mentions, Figma URLs, user flows, business rules, screens | Design + Docs + Data Model (all 3) |
+| `technical-infra` | cron, lock, cache, module, migration, config, scheduler, performance. No UI. | Data Model + Tech Feasibility |
+| `bug-fix` | Jira type = Bug, error, regression, stack trace, "no funciona" | Data Model |
+| `data-integration` | AMQP, consumer, sync, webhook, external system, queue, message | Docs + Data Model |
+
+**Classification rules:**
+- Check Jira issue type first (Bug → `bug-fix`)
+- Then scan description + ACs for indicator keywords
+- If multiple types match, prefer the one with more indicators
+- When in doubt, default to `business-feature` (launches all agents — safest)
+
+Store the classification as `TICKET_TYPE` for use in Phase 2 and output.
 
 ### Phase 2: Parallel analysis
 
-Launch up to 3 agents in parallel using the `Agent` tool. Each agent must receive **complete instructions** — they cannot access skill definitions.
+Launch agents in parallel using the `Agent` tool based on `TICKET_TYPE` from Phase 1b. Each agent must receive **complete instructions** — they cannot access skill definitions.
 
 **IMPORTANT**: If any agent fails or returns incomplete data, do NOT retry. Report the failure in FUENTES as `⚠️ Error al analizar [source]: [reason]` and continue with the sources that did succeed.
 
-**Agent 1 — Design** (skip if no Figma URLs):
+**Agents skipped** due to ticket classification are reported in FUENTES as `⏭️ Omitido por clasificación ([TICKET_TYPE])`.
+
+**Agent 1 — Design** (launch if: `business-feature` | skip if: no Figma URLs or ticket type is `technical-infra`, `bug-fix`, `data-integration`):
 
 Prompt must include:
 - The Figma URL(s) to analyze
@@ -59,7 +89,7 @@ Prompt must include:
 - Detect covered and missing UI states (empty, loading, error, success, pagination)
 - If Figma MCP fails, report it — do NOT attempt Playwright
 
-**Agent 2 — Documentation:**
+**Agent 2 — Documentation** (launch if: `business-feature`, `data-integration` | skip if: `technical-infra`, `bug-fix`):
 
 Prompt must include:
 - The key terms to search (extracted from ticket in Phase 1)
@@ -70,7 +100,7 @@ Prompt must include:
 - Return direct quotes (never paraphrase), business rules, contradictions between sources
 - If a platform is unreachable, report it and continue with the other
 
-**Agent 3 — Data model:**
+**Agent 3 — Data model** (launch if: ALL ticket types):
 
 Prompt must include:
 - The entity/concept names to analyze (extracted from ticket in Phase 1)
@@ -78,6 +108,17 @@ Prompt must include:
 - For each field: trace origin (who creates it), mutations (who changes it), validations, possible values
 - Map relationships between entities (direction, cardinality, cascade behavior)
 - Check migrations for recent schema changes
+
+**Agent 4 — Technical feasibility** (launch if: `technical-infra`, or ticket proposes a specific technical approach | skip if: `business-feature`, `bug-fix`, `data-integration` without technical proposal):
+
+Prompt must include:
+- The technical approach/solution described in the ticket
+- Instructions to first read the skill file: `Read ~/.claude/skills/analyze-technical-feasibility/SKILL.md` then follow its instructions
+- Check if required packages are installed (`package.json`)
+- Analyze where the solution fits in the codebase architecture
+- Search for existing patterns (scheduling, locks, raw SQL, etc.)
+- Identify implementation gaps (new files, migrations, config)
+- Evaluate risks (multi-replica scaling, testing strategy, rollback)
 
 **Inline — Ticket clarification** (main thread, while agents run):
 - Detect author's open questions
@@ -91,6 +132,12 @@ Once all agents return, build a flat data table. For EACH data element from ANY 
 - ✅ **Claro** — fully understood: what it is, where it comes from, what values it has
 - ❓ **Dudoso** — partially known, has open questions. MUST have at least one question.
 - ❌ **No existe** — mentioned in ticket/design but not found in code/docs. MUST have at least one question.
+
+For configuration parameters (detected by Agent 3's config interrogation), use an alternative template in the DATOS table:
+```
+📋 [parameter] (CONFIGURACIÓN)
+   ¿Qué es? / Valor default? / Entornos? / Validación? / Rango?
+```
 
 Detect cross-reference problems:
 - Ghost data (in ticket/design, not in code)
@@ -113,7 +160,7 @@ Each question gets a sequential number (#1, #2, ...) referenced in SCOPE and PR�
 
 - **SE ENTREGA** — only items with ✅ data and no blocking questions
 - **NO SE ENTREGA** — explicitly excluded items with reason
-- **BLOQUEADO** — items waiting on specific question numbers
+- **BLOQUEADO** — items waiting on specific question numbers or unresolved Jira dependencies (`🚧 Bloqueante`)
 
 There is NO "Asumido" section. If there's doubt, it's a question.
 
@@ -122,6 +169,17 @@ There is NO "Asumido" section. If there's doubt, it's a question.
 Ordered by priority (what unblocks the most first):
 - Each step has a responsible role and references the question it unblocks
 - Separate "SE PUEDE EMPEZAR YA" from "REQUIERE RESPUESTA PRIMERO"
+
+**For `technical-infra` tickets**, add a SUGERENCIA DE ESTRUCTURA sub-section in PRÓXIMOS PASOS:
+- Module decision: create new or extend existing? With reasoning.
+- Service: name, path, and responsibility.
+- Testing strategy: TestContainers, mock, in-memory.
+- Config: environment variables needed.
+- When there are trade-offs, present options:
+  ```
+  Opción A: ... (Pro: ... / Contra: ...)
+  Opción B: ... (Pro: ... / Contra: ...)
+  ```
 
 ### Phase 7: Output
 

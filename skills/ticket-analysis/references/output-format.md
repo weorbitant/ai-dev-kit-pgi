@@ -27,7 +27,7 @@ Template for the terminal output of `/ticket-analysis`.
 ```
 ═══════════════════════════════════════════════════════
 [TICKET-KEY] · [Title]
-Type: [type] | Status: [status] | SP: [points or —]
+Type: [type] | Status: [status] | SP: [points or —] | Category: [business-feature/technical-infra/bug-fix/data-integration]
 ═══════════════════════════════════════════════════════
 
 RESUMEN
@@ -71,17 +71,41 @@ FUENTES CONSULTADAS
     - [servicio encontrado + métodos relevantes]
     - [lo que NO existe y se esperaba encontrar]
 
+  DEPENDENCIAS JIRA:
+  (Solo si hay tickets referenciados en descripción, ACs o linked issues)
+  - DEVPT-XXX "[Título]" — Estado: [Jira status] — [✅ Resuelto / ⚠️ En progreso / 🚧 Bloqueante]
+    Impacto: [qué necesita este ticket del otro]
+  - DEVPT-YYY "[Título]" — Estado: [Jira status] — [✅ Resuelto / ⚠️ En progreso / 🚧 Bloqueante]
+    Impacto: [qué necesita este ticket del otro]
+  (Si no hay tickets referenciados: "No se encontraron dependencias Jira.")
+
+  FACTIBILIDAD TÉCNICA — [enfoque evaluado]
+  (Solo si se lanzó Agent 4 — ticket type: technical-infra o propuesta técnica específica)
+  Estado: [✅ Viable / ⚠️ Viable con cambios / ❌ Problemas]
+  Hallazgos:
+    - [dependencia instalada o faltante]
+    - [patrón existente encontrado o ausente]
+    - [gap de implementación identificado]
+    - [riesgo detectado]
+  (Si no aplica: esta sección no aparece)
+
 ───────────────────────────────────────────────────────
 DATOS IDENTIFICADOS
 ───────────────────────────────────────────────────────
 
   Cada dato mencionado en cualquier fuente, una línea por dato:
 
-  #  Dato                Origen                         Estado
-  ── ─────────────────── ────────────────────────────── ──────
-  1  [nombre]            [de dónde sale — fuente]       ✅ / ❓ / ❌
-  2  [nombre]            [de dónde sale — fuente]       ✅ / ❓ / ❌
+  #  Dato                Tipo       Origen                         Estado
+  ── ─────────────────── ────────── ────────────────────────────── ──────
+  1  [nombre]            dato       [de dónde sale — fuente]       ✅ / ❓ / ❌
+  2  [nombre]            config     [de dónde sale — fuente]       ✅ / ❓ / ❌
+  3  [nombre]            mecanismo  [de dónde sale — fuente]       ✅ / ❓ / ❌
   ...
+
+  Tipos:
+  dato      — campo de entidad, valor de negocio
+  config    — parámetro de configuración (env var, config file, hardcoded)
+  mecanismo — concepto técnico (lock, scheduler, cron job, cache strategy)
 
   Leyenda:
   ✅ Claro    — se sabe qué es, de dónde viene, qué valores tiene
@@ -151,6 +175,17 @@ PRÓXIMOS PASOS
 
   REQUIERE RESPUESTA PRIMERO:
   - [item] — espera pregunta #[N]
+
+  SUGERENCIA DE ESTRUCTURA:
+  (Solo para tickets technical-infra. No aparece en otros tipos.)
+  - [Módulo]: ¿Crear [NuevoModule] o extender [ExistenteModule]? [razonamiento]
+  - [Servicio]: [NombreService] en [path propuesto] — responsabilidad: [X]
+  - [Testing]: [estrategia — TestContainers / mock / in-memory]
+  - [Config]: [variables de entorno necesarias]
+
+  (Cuando hay trade-offs:)
+  Opción A: [descripción] (Pro: [ventaja] / Contra: [desventaja])
+  Opción B: [descripción] (Pro: [ventaja] / Contra: [desventaja])
 
 ───────────────────────────────────────────────────────
 SCOPE
