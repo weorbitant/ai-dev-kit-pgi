@@ -10,89 +10,36 @@ model: sonnet
 
 ## Overview
 
-Execute read-only SQL queries against PostgreSQL databases via PgBouncer from within application pods. No `psql` is available in pods — use `node -e` with the `pg` module instead.
+Execute read-only SQL queries against PostgreSQL databases via PgBouncer from within application pods. No `psql` available — use the `pg` module via `node -e`.
+
+## Configuration
+
+Read project-specific values from the project's CLAUDE.md (`## Infrastructure` section):
+- kubectl context, namespace, app pod label, database name, config file per environment
 
 ## Constraints
 
-- **PgBouncer does NOT support parameterized queries** (`$1::uuid[]` will fail with syntax error). Always use inline SQL with quoted values.
-- **Read-only queries only.** Never run INSERT/UPDATE/DELETE without explicit user confirmation.
-- Pods don't have `psql`. Use `node -e` with the `pg` module that's already installed in NestJS app pods.
+- **PgBouncer does NOT support parameterized queries** — use inline SQL with quoted values.
+- **Read-only only.** Never run INSERT/UPDATE/DELETE without explicit user confirmation.
+- Use `require('/app/node_modules/pg')` — module is not in the global node path.
+- Use `development.config.js` for DEV, `production.config.js` for PROD (both files exist in every pod).
 
 ## Process
 
-### 1. Find the database connection details
+1. Read the project CLAUDE.md for connection details (context, namespace, db name, pod label)
+2. Find a running pod: `kubectl --context=<ctx> get pods -n <namespace> | grep <app-label>`
+3. Get connection details from the config file inside the pod
+4. Run the query using the helper script or inline `node -e`
 
-```bash
-kubectl --context=<env> exec -n plataformadato <pod> -- \
-  cat /app/dist/src/config/production.config.js
-```
-
-Look for the `postgresql` block:
-- `host` — PgBouncer service (e.g., `pd-infra-pgbouncer.plataformadato.svc.cluster.local`)
-- `port` — Usually `6432`
-- `database` — Service-specific (e.g., `pd-service-backoffice-api-prod`)
-- `user` — Usually `postgres`
-- `password` — `process.env.POSTGRES_PASSWORD`
-
-### 2. Run the query
-
-Copy the helper script to the pod and use it for all query types:
-
-```bash
-# Copy script to pod
-kubectl --context=<env> cp ~/.claude/skills/db-query/scripts/query.js \
-  plataformadato/<pod>:/tmp/query.js
-
-# List tables
-kubectl --context=<env> exec -n plataformadato <pod> -- \
-  node /tmp/query.js --host <pgbouncer-host> --db <database> --tables
-
-# Describe a table
-kubectl --context=<env> exec -n plataformadato <pod> -- \
-  node /tmp/query.js --host <pgbouncer-host> --db <database> --describe <table>
-
-# Check if records exist
-kubectl --context=<env> exec -n plataformadato <pod> -- \
-  node /tmp/query.js --host <pgbouncer-host> --db <database> --exists <table> --ids "uuid1,uuid2"
-
-# Run arbitrary SQL
-kubectl --context=<env> exec -n plataformadato <pod> -- \
-  node /tmp/query.js --host <pgbouncer-host> --db <database> --sql "SELECT count(*) FROM client"
-```
-
-See [scripts/query.js](scripts/query.js) for the full script. It reads `POSTGRES_PASSWORD` from the pod's environment automatically.
-
-**For quick one-off queries** (without copying the script):
-
-```bash
-kubectl --context=<env> exec -n plataformadato <pod> -- sh -c '
-node -e "
-const { Client } = require(\"pg\");
-const c = new Client({
-  host: \"<host>\", port: 6432,
-  database: \"<database>\", user: \"postgres\",
-  password: process.env.POSTGRES_PASSWORD
-});
-c.connect()
-  .then(() => c.query(\"<YOUR SQL HERE>\"))
-  .then(r => { console.log(JSON.stringify(r.rows, null, 2)); c.end(); })
-  .catch(e => { console.error(e.message); c.end(); });
-"
-'
-```
-
-## Known Databases
-
-| Service | Database name pattern |
-|---|---|
-| backoffice-api | `pd-service-backoffice-api-<env>` |
-| obligations-api | `mp-service-obligations-api-<env>` |
+See [scripts/query.js](scripts/query.js) for the reusable helper (copy to pod with `kubectl cp`).
+See [references/query-examples.md](references/query-examples.md) for command templates.
 
 ## Common Mistakes
 
 | Mistake | Prevention |
 |---|---|
-| Using `$1::uuid[]` parameterized queries | PgBouncer rejects these. Use inline SQL with `\x27` quoted values |
-| Running write queries without confirmation | Always ask user before INSERT/UPDATE/DELETE |
-| Wrong pod (pod doesn't have `pg` module) | Use NestJS app pods, not infra pods |
-| Forgetting `process.env.POSTGRES_PASSWORD` | The password is in the pod's env, don't hardcode it |
+| Not reading CLAUDE.md | Namespace, context, DB name vary per project. |
+| Parameterized queries (`$1::uuid[]`) | PgBouncer rejects them. Use inline SQL. |
+| `require('pg')` fails | Use `require('/app/node_modules/pg')`. |
+| Wrong config file | `production.config.js` in a DEV pod points to PROD db. Use `development.config.js` for DEV. |
+| Write queries without confirmation | Always ask before INSERT/UPDATE/DELETE. |

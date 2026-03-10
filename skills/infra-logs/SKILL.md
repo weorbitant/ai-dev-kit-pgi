@@ -14,18 +14,12 @@ Search and analyze logs from pods in the cluster. Supports filtering by time, er
 
 ## Pod Discovery
 
+Read namespace from the project's CLAUDE.md (`## Infrastructure` section).
+
 ```bash
 # Find pods for a service
-kubectl --context=<env> get pods -n plataformadato | grep <service>
-
-# For infra services
-kubectl --context=<env> get pods -n shared-infra | grep <service>
+kubectl --context=<env> get pods -n <namespace> | grep <service>
 ```
-
-Common namespaces:
-- `plataformadato` — application services (backoffice-api, obligations-api, data-factory, etc.)
-- `shared-infra` — RabbitMQ, monitoring
-- `gestordocumental` — gestor documental services
 
 ## Log Commands
 

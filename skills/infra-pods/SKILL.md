@@ -69,13 +69,19 @@ kubectl --context=<env> get pod <pod> -n <namespace> \
   -o jsonpath='{.spec.containers[0].image}'
 ```
 
+The image tag is the **GitHub Actions run ID** (`databaseId`). To find which PR/commit it corresponds to:
+
+```bash
+# Cross-reference image tag with CI runs on main
+gh run list --repo <org>/<repo> --branch main --json databaseId,displayTitle,headSha \
+  | jq '.[] | select(.databaseId == <image-tag>)'
+```
+
 ## Common Namespaces
 
-| Namespace | Services |
-|---|---|
-| `plataformadato` | backoffice-api, obligations-api, data-factory, http2bus, pgbouncer, adapters |
-| `shared-infra` | RabbitMQ, monitoring |
-| `gestordocumental` | gestor documental API |
+Read namespace names from the project's CLAUDE.md (`## Infrastructure` section). Typical patterns:
+- Application services: one namespace per cluster (e.g. `plataformadato`)
+- Shared infrastructure (RabbitMQ, monitoring): separate namespace (e.g. `shared-infra`)
 
 ## Rollout Management
 
@@ -87,11 +93,13 @@ kubectl --context=<env> get deploy -n <namespace> | grep <service>
 
 ### Restart a deployment (rolling)
 
+> ⚠️ **ALWAYS ask for explicit confirmation before running this command, in any environment.**
+> State clearly: what deployment will restart, in which environment, and what the impact is (brief downtime during rollout).
+> Do NOT run without the user saying "yes", "proceed", or equivalent.
+
 ```bash
 kubectl --context=<env> rollout restart deployment/<deployment> -n <namespace>
 ```
-
-**Caution:** Always confirm with user before restarting pods in PROD.
 
 ### Check rollout history
 
