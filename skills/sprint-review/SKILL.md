@@ -55,7 +55,7 @@ Fetch each ticket individually using `mcp__claude_ai_Atlassian__getJiraIssue(clo
 **For both modes**, extract from each ticket:
 - Key, summary, description, acceptance criteria
 - Issue type (Story, Bug, Task, Tech Debt, Sub-task)
-- Story points (check `story_points` or `customfield_10016`)
+- Story points (use `customfield_10031` — NOT `customfield_10016` which is always null)
 - Status, assignee, labels
 - Issue links (blocks, is blocked by, duplicates, relates to)
 - Sprint name (for report header)
@@ -111,8 +111,10 @@ For each ticket, check:
 
 For each ticket, check if story points are assigned. All tickets must have story points before entering a sprint.
 
-**Severity:** Critical
-**Output per finding:** List of unestimated ticket keys.
+**Story-level rule:** If a Story has sub-tasks, its story points MUST equal the sum of its sub-tasks' story points. Flag mismatches as Warning with the expected vs actual values.
+
+**Severity:** Critical (missing SP), Warning (sum mismatch)
+**Output per finding:** List of unestimated ticket keys. For mismatches: ticket key, current SP, sum of sub-tasks SP.
 
 #### Check 4: Vague language
 
